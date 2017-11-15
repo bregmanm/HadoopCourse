@@ -1,0 +1,36 @@
+[cloudera@quickstart HadoopCourse]$ hdfs dfs -ls -R
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/05
+-rw-r--r--   1 cloudera cloudera       9310 2017-11-14 07:08 events/2017/11/05/FlumeData.1510672082644
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/06
+-rw-r--r--   1 cloudera cloudera       8362 2017-11-14 07:08 events/2017/11/06/FlumeData.1510672082746
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/07
+-rw-r--r--   1 cloudera cloudera       7850 2017-11-14 07:08 events/2017/11/07/FlumeData.1510672082550
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/08
+-rw-r--r--   1 cloudera cloudera       7772 2017-11-14 07:08 events/2017/11/08/FlumeData.1510672082157
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/09
+-rw-r--r--   1 cloudera cloudera      10555 2017-11-14 07:08 events/2017/11/09/FlumeData.1510672078484
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/10
+-rw-r--r--   1 cloudera cloudera       9093 2017-11-14 07:08 events/2017/11/10/FlumeData.1510672082433
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 events/2017/11/11
+-rw-r--r--   1 cloudera cloudera       8806 2017-11-14 07:08 events/2017/11/11/FlumeData.1510672082297
+[cloudera@quickstart HadoopCourse]$ hdfs dfs -mkdir hive_purchases
+[cloudera@quickstart HadoopCourse]$ 
+[cloudera@quickstart HadoopExam]$ hdfs dfs -mkdir hive_purchases/2017-11-05
+[cloudera@quickstart HadoopExam]$ hdfs dfs -cp events/2017/11/05/FlumeData.1510672082644 hive_purchases/2017-11-05
+[cloudera@quickstart HadoopExam]$ hdfs dfs -ls -R hive_purchases
+drwxr-xr-x   - cloudera cloudera          0 2017-11-14 21:34 hive_purchases/2017-11-05
+-rw-r--r--   1 cloudera cloudera       9310 2017-11-14 21:34 hive_purchases/2017-11-05/FlumeData.1510672082644
+[cloudera@quickstart HadoopExam]$ hdfs dfs -mkdir hive_purchases/date=2017-11-05
+[cloudera@quickstart HadoopExam]$ hdfs dfs -cp events/2017/11/05/FlumeData.1510672082644 hive_purchases/date=2017-11-05
+[cloudera@quickstart HadoopExam]$ hdfs dfs -ls -R hive_purchases
+drwxr-xr-x   - cloudera cloudera          0 2017-11-14 21:34 hive_purchases/2017-11-05
+-rw-r--r--   1 cloudera cloudera       9310 2017-11-14 21:34 hive_purchases/2017-11-05/FlumeData.1510672082644
+drwxr-xr-x   - cloudera cloudera          0 2017-11-14 21:52 hive_purchases/date=2017-11-05
+-rw-r--r--   1 cloudera cloudera       9310 2017-11-14 21:52 hive_purchases/date=2017-11-05/FlumeData.1510672082644
+[cloudera@quickstart HadoopExam]$ hdfs dfs -ls -R /hive_purchases
+drwxr-xr-x   - hdfs supergroup          0 2017-11-14 21:48 /hive_purchases/date=2017-11-05
+[cloudera@quickstart HadoopExam]$ 
+

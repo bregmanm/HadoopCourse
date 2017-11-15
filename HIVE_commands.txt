@@ -1,0 +1,20 @@
+hive> CREATE EXTERNAL TABLE hive_purchases (
+    > name STRING,
+    > price DECIMAL(10,2),
+    > category STRING,
+    > ip STRING)
+    > PARTITIONED BY (date TIMESTAMP)
+    > ROW FORMAT DELIMITED
+    > FIELDS TERMINATED BY ','
+    > LINES TERMINATED BY '\n'
+    > STORED AS TEXTFILE
+    > LOCATION '/hive_purchases';
+OK
+Time taken: 0.084 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION(date='2017-11-05');
+OK
+Time taken: 0.127 seconds
+hive> select * from hive_purchases;
+OK
+Time taken: 0.125 seconds
+
