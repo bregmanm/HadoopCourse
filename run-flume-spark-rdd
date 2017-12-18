@@ -1,0 +1,2 @@
+#!/bin/bash
+flume-ng agent -f ./netcatsparkRDD.conf -n NetcatAgent -Dflume.root.logger=INFO,console	
