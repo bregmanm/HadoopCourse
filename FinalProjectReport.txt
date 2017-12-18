@@ -1,0 +1,255 @@
+1. Create the event producer eventProducer.py. This python 2 script creates events and sends them both to output file 
+and to localhost:56565 to Netcat flume. IP addresses were taken ftom the file GeoLite2-Country-CSV_20171107/GeoLite2-Country-Blocks-IPv4.csv
+2. Setup Netcat flume. the configuration is placed in netcat.conf. According to the task the HDFS input directory must be events/${year}/${month}/${day}.
+Therefore regex extractor interceptor was added: add the timestamp header with the value from purchase date.
+This date will be partitioned at "hive" step therefore search and replace interceptor was also added: remove purchase data from event body.
+3. Run flume:
+ flume-ng agent -f ./netcat.conf -n NetcatAgent -Dflume.root.logger=INFO,console
+ Launch was successful:
+  17/11/12 01:48:26 INFO source.NetcatSource: Created serverSocket:sun.nio.ch.ServerSocketChannelImpl[/127.0.0.1:56565]
+4. Run eventProducer.py. All events were received by flume and new directories were created on HDFS side:
+
+[cloudera@quickstart HadoopExam]$ hdfs dfs -ls -R /user/cloudera/events
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/05
+-rw-r--r--   1 cloudera cloudera       9310 2017-11-14 07:08 /user/cloudera/events/2017/11/05/FlumeData.1510672082644
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/06
+-rw-r--r--   1 cloudera cloudera       8362 2017-11-14 07:08 /user/cloudera/events/2017/11/06/FlumeData.1510672082746
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/07
+-rw-r--r--   1 cloudera cloudera       7850 2017-11-14 07:08 /user/cloudera/events/2017/11/07/FlumeData.1510672082550
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/08
+-rw-r--r--   1 cloudera cloudera       7772 2017-11-14 07:08 /user/cloudera/events/2017/11/08/FlumeData.1510672082157
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/09
+-rw-r--r--   1 cloudera cloudera      10555 2017-11-14 07:08 /user/cloudera/events/2017/11/09/FlumeData.1510672078484
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/10
+-rw-r--r--   1 cloudera cloudera       9093 2017-11-14 07:08 /user/cloudera/events/2017/11/10/FlumeData.1510672082433
+drwxrwxrwx   - cloudera cloudera          0 2017-11-14 07:08 /user/cloudera/events/2017/11/11
+-rw-r--r--   1 cloudera cloudera       8806 2017-11-14 07:08 /user/cloudera/events/2017/11/11/FlumeData.1510672082297
+
+5. Run hive. Create the external table:
+hive> CREATE EXTERNAL TABLE hive_purchases (
+ name STRING,
+ price DECIMAL(10,2),
+ time STRING,
+ category STRING,
+ ip STRING)
+ PARTITIONED BY (date TIMESTAMP)
+ ROW FORMAT DELIMITED
+ FIELDS TERMINATED BY ','
+ STORED AS TEXTFILE
+ LOCATION '/user/cloudera/events/';
+OK
+
+6. Add partitions to the table hive_purchases:
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-05') LOCATION '/user/cloudera/events/2017/11/05';
+OK
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-06') LOCATION '/user/cloudera/events/2017/11/06';
+OK
+Time taken: 0.136 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-07') LOCATION '/user/cloudera/events/2017/11/07';
+OK
+Time taken: 0.131 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-08') LOCATION '/user/cloudera/events/2017/11/08';
+OK
+Time taken: 0.141 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-09') LOCATION '/user/cloudera/events/2017/11/09';
+OK
+Time taken: 0.135 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-10') LOCATION '/user/cloudera/events/2017/11/10';
+OK
+Time taken: 0.141 seconds
+hive> ALTER TABLE hive_purchases ADD PARTITION (date='2017-11-11') LOCATION '/user/cloudera/events/2017/11/11';
+OK
+Time taken: 0.127 seconds
+
+7. Select top 10 most frequently purchase categories:
+hive> CREATE TABLE MOST_FREQ_CAT 
+>ROW FORMAT DELIMITED
+>FIELDS TERMINATED BY ','
+>STORED AS TEXTFILE
+>AS SELECT category, COUNT(category) AS cat_occur FROM hive_purchases GROUP BY category ORDER BY cat_occur DESC LIMIT 10;
+Result:
+Category 3	114
+Category 7	113
+Category 2	111
+Category 6	105
+Category 1	100
+Category 5	100
+Category 9	91
+Category 8	90
+Category 4	86
+Category 0	84
+
+8. Select top 10 most frequently purchased product in each category:
+hive> CREATE TABLE MOST_FREQ_PROD 
+>ROW FORMAT DELIMITED
+>FIELDS TERMINATED BY ','
+>STORED AS TEXTFILE
+>AS SELECT category, name, COUNT(name) as name_occur FROM hive_purchases GROUP BY category, name ORDER BY category, name_occur DESC;
+Result:
+Category 0	Product 6	12
+Category 0	Product 3	11
+Category 0	Product 8	11
+Category 0	Product 4	10
+Category 0	Product 7	10
+Category 0	Product 2	9
+Category 0	Product 9	9
+Category 0	Product 5	7
+Category 0	Product 1	5
+Category 1	Product 17	15
+Category 1	Product 19	14
+Category 1	Product 12	13
+Category 1	Product 14	10
+Category 1	Product 11	10
+Category 1	Product 13	10
+Category 1	Product 15	9
+Category 1	Product 10	7
+Category 1	Product 16	6
+Category 1	Product 18	6
+
+9  Put data from http://dev.maxmind.com/geoip/geoip2/geolite2/ to HIVE table
+hdfs dfs -put GeoLite2-Country-Locations-en.csv /user/mbregman/geolite/geolite/locations
+hdfs dfs -put GeoLite2-Country-Blocks-IPv4.csv /user/mbregman/geolite/geolite/blocks
+hive> CREATE EXTERNAL TABLE country_blocks (
+> network STRING,
+> geoname_id BIGINT,
+> registered_country_geoname_id BIGINT,
+> represented_country_geoname_id STRING,
+> is_anonymous_proxy TINYINT,
+> is_satellite_provider TINYINT)
+> ROW FORMAT DELIMITED
+> FIELDS TERMINATED BY ','
+> STORED AS TEXTFILE
+> LOCATION '/user/mbregman/geolite/blocks'
+> TBLPROPERTIES ("skip.header.line.count"="1");
+
+hive> CREATE EXTERNAL TABLE country_locations (
+> geoname_id BIGINT,
+> locale_code STRING,
+> continent_code STRING,
+> continent_name STRING,
+> country_iso_code STRING,
+> country_name STRING)
+> ROW FORMAT DELIMITED
+> FIELDS TERMINATED BY ','
+> STORED AS TEXTFILE
+> LOCATION '/user/mbregman/geolite/locations'
+> TBLPROPERTIES ("skip.header.line.count"="1");
+
+10. Prepare to execute JOINs:
+hive> SET hive.auto.convert.join=false;
+JOIN doesn't work without this command!
+
+11. Select top 10 countries with the highest money spending:
+hive> CREATE TABLE COUNTRIES_MOST_PURCHASED 
+>ROW FORMAT DELIMITED
+>FIELDS TERMINATED BY ','
+>STORED AS TEXTFILE
+>AS SELECT country_locations.country_name as country_name, SUM(hive_purchases.price) as spend
+> FROM hive_purchases, country_blocks, country_locations
+> WHERE hive_purchases.ip=regexp_replace(country_blocks.network, "/\\d+", "")
+> AND country_blocks.registered_country_geoname_id=country_locations.geoname_id
+> GROUP BY country_locations.country_name ORDER BY spend DESC LIMIT 10;
+
+"United States"	6659.93
+France	1916.08
+Canada	1622.59
+"United Kingdom"	1526.02
+Netherlands	1052.84
+Russia	985.04
+Germany	884.47
+Sweden	575.19
+Japan	526.3
+Australia	507.6
+
+12 Put queries result from tables TABLE MOST_FREQ_CAT, TABLE MOST_FREQ_PROD, COUNTRIES_MOST_PURCHASED to mysql via sqoop:
+Cloudera built-in mysql:
+$mysql -uroot -pcloudera
+Define hostname and port:
+mysql> SHOW VARIABLES WHERE Variable_name = 'hostname';
+mysql> SHOW VARIABLES WHERE Variable_name = 'port';
+12.1 Run script_create_tables.sql on mysql
+12.2 TABLE MOST_FREQ_CAT
+$ sqoop export --connect "jdbc:mysql://ip-10-0-0-21:3306/sqoop1" \
+> --username root --password cloudera \
+> --table MOST_FREQ_CAT \
+> --export-dir /user/hive/warehouse/most_freq_cat \
+> --input-fields-terminated-by ',' \
+> --input-lines-terminated-by '\n'
+
+In mysql:
+mysql> select * from MOST_FREQ_CAT;
++------------+-----------+
+| category   | cat_occur |
++------------+-----------+
+| Category 4 |        86 |
+| Category 0 |        84 |
+| Category 3 |       114 |
+| Category 7 |       113 |
+| Category 2 |       111 |
+| Category 5 |       100 |
+| Category 9 |        91 |
+| Category 8 |        90 |
+| Category 6 |       105 |
+| Category 1 |       100 |
++------------+-----------+
+10 rows in set (0.00 sec)
+
+12.3 TABLE MOST_FREQ_PROD
+$ sqoop export --connect "jdbc:mysql://ip-10-0-0-21:3306/sqoop1" \
+> --username root --password cloudera \
+> --table MOST_FREQ_PROD \
+> --export-dir /user/hive/warehouse/most_freq_prod \
+> --input-fields-terminated-by ',' \
+> --input-lines-terminated-by '\n'
+
+In mysql:
+mysql> select * from MOST_FREQ_PROD;
+
++-------------+-------------+------------+
+| category    | name        | name_occur |
++-------------+-------------+------------+
+| Category 0  | Product 6   |         12 |
+| Category 0  | Product 3   |         11 |
+| Category 0  | Product 8   |         11 |
+| Category 0  | Product 4   |         10 |
+| Category 0  | Product 7   |         10 |
+. . . . . . . .
+12.4 TABLE COUNTRIES_MOST_PURCHASED
+$ sqoop export --connect "jdbc:mysql://ip-10-0-0-21:3306/sqoop1" \
+> --username root --password cloudera \
+> --table COUNTRIES_MOST_PURCHASED \
+> --export-dir /user/hive/warehouse/countries_most_purchased \
+> --input-fields-terminated-by ',' \
+> --input-lines-terminated-by '\n'
+
+In mysql:
+mysql> select * from COUNTRIES_MOST_PURCHASED;
++------------------+---------+
+| country_name     | spend   |
++------------------+---------+
+| Sweden           |  575.19 |
+| Japan            |  526.30 |
+| Australia        |  507.60 |
+| "United States"  | 6659.93 |
+| France           | 1916.08 |
+| Canada           | 1622.59 |
+| Russia           |  985.04 |
+| Germany          |  884.47 |
+| "United Kingdom" | 1526.02 |
+| Netherlands      | 1052.84 |
++------------------+---------+
+10 rows in set (0.00 sec)
+
+13 Tune flume to send events to spark
+Please see netcatsparkRDD.conf for RDD.
+
+14. Spark + RDD
+Run scala project "sparkexam", after that run flume (command line in item 3, replace "netcat.conf" to "netcatsparkRDD.conf"
+after that run eventProducer
+Data rom http://dev.maxmind.com/geoip/geoip2/geolite2/ to hdfs are already loaded in item 9
+14.1 Select top 10  most frequently purchased categories, Select top 10 most frequently purchased product in each category:
+In mysql check that tables SPARK_MOST_FREQ_CAT, SPARK_MOST_FREQ_PROD are created. Run "SELECT * FROM <each table>
+
+15 Spark + dataset
