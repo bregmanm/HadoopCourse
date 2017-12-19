@@ -82,11 +82,17 @@ Category 4	86
 Category 0	84
 
 8. Select top 10 most frequently purchased product in each category:
-hive> CREATE TABLE MOST_FREQ_PROD 
->ROW FORMAT DELIMITED
->FIELDS TERMINATED BY ','
->STORED AS TEXTFILE
->AS SELECT category, name, COUNT(name) as name_occur FROM hive_purchases GROUP BY category, name ORDER BY category, name_occur DESC;
+hive> CREATE TABLE MOST_FREQ_PROD
+    > ROW FORMAT DELIMITED
+    > FIELDS TERMINATED BY ','
+    > STORED AS TEXTFILE
+    > AS SELECT category, name, name_occur FROM (
+    > SELECT category, name, name_occur, rank() OVER (
+    > PARTITION BY category ORDER BY category, -name_occur) as rank FROM (
+    > SELECT category, name, COUNT(name) as name_occur FROM hive_purchases GROUP BY category, name
+    > ) t1
+    > ) t2 WHERE rank < 11;
+
 Result:
 Category 0	Product 6	12
 Category 0	Product 3	11
