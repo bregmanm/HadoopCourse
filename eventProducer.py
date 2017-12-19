@@ -9,6 +9,7 @@ import datetime
 from datetime import timedelta
 import csv
 import socket
+from time import sleep
 
 def produceEvent(priceMu, priceSigma, startDate, timeMu, timeSigma, listIPs):
     """
@@ -21,7 +22,8 @@ def produceEvent(priceMu, priceSigma, startDate, timeMu, timeSigma, listIPs):
     The client IP address is choosen randomly from input ip list
     """
     # Product name
-    productName = "Product " + str(randint(1,100))
+    productNumber = randint(1, 100)
+    productName = "Product " + str(productNumber)
     #Product price
     productPrice = gauss(priceMu, priceSigma)
     #Purchase time
@@ -31,11 +33,13 @@ def produceEvent(priceMu, priceSigma, startDate, timeMu, timeSigma, listIPs):
     seconds = seconds - hours*3600
     minutes = int(seconds//60)
     seconds = int(seconds - minutes*60)
+    if hours > 23:
+	hours = 23
     #Product category
-    productCategory = "Category " + str(randint(1,50))
+    productCategory = "Category " + str(int(productNumber / 10))
     #Client IP address
     clientIPaddress = listIPs[randrange(len(listIPs))]
-    return ",".join([productName, str(round(productPrice, 2)), randomDate.strftime("%Y-%m-%d"), \
+    return ",".join([productName, str(round(productPrice, 2)), randomDate.strftime("%Y-%m-%d") + \
     " {0:02}:{1:02}:{2:02}".format(hours, minutes, seconds), productCategory, clientIPaddress])
     
 def readGeoliteTable(filename):
@@ -63,7 +67,15 @@ if __name__ == '__main__':
     for x in range(msgCount):
 	outpString = produceEvent(25.6, 7.4, datetime.date(2017, 11,5), 17*3600, 4*3600, ipList) + '\n'
 	f.write(outpString)
-	s.sendall(outpString)
+	ack = "FAIL"
+	while not ack.startswith("OK"):
+	    print "Send:"
+	    s.sendall(outpString)
+	    ack = s.recv(4096)
+	    print "Responce: {0}".format(ack)
+	    if not ack.startswith("OK"):
+		sleep(30.0)
+		
     s.shutdown(socket.SHUT_WR)
     s.close()
     f.close()
